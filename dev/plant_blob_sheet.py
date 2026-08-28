@@ -917,8 +917,10 @@ def plant(
             ri, ci = divmod(i, cols)
             planted = plant_foot(scaled_cells[i], cell_w, cell_h, foot_y)
             out.paste(planted, (ci * cell_w, ri * cell_h))
-        # Bookends: foot-align game run0 into (possibly larger) cell — no stretch
-        book = plant_foot(game_run0, cell_w, cell_h, foot_y)
+        # Bookends: crop transparent padding first, then foot-align.
+        # Pasting the full run cell (already FOOT_GAP inside) into an expanded
+        # cell leaves opaque feet ~FOOT_GAP higher than mid cells — looks unaligned.
+        book = plant_foot(crop_alpha(game_run0), cell_w, cell_h, foot_y)
         out.paste(book, (0, 0))
         ri, ci = divmod(n - 1, cols)
         out.paste(book, (ci * cell_w, ri * cell_h))

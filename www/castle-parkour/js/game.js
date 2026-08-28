@@ -1369,9 +1369,54 @@ function enterBonusSpace() {
   transitionFx = 1.0;
   portal = null;
   portalSuck = null;
-  walls = []; beams = []; monsters = []; spikes = []; flyers = []; bats = []; elevatedPlatforms = []; gaps = [];
-  platforms.push({ x0: CHAR_X - 40, x1: CHAR_X + 1200 });
+  // 整段重建：勿只 push，否则旧世界平台叠在奖励平地上
+  walls = []; beams = []; monsters = []; spikes = []; flyers = []; bats = [];
+  elevatedPlatforms = []; gaps = []; coins = []; powerups = [];
+  const padEnd = CHAR_X + Math.max(420, Math.floor(W * 0.55));
+  platforms = [{ x0: CHAR_X - 40, x1: padEnd }];
+  genX = padEnd;
+  featureCooldown = 0;
+  duckObsCd = 0;
+  jumpObsCd = 0;
+  gapCooldown = 99; // 奖励内 genStep 不走坑逻辑；退出时再清
+  platformAfterGap = 1;
   spawnBonusCoins();
+  ensureGen();
+}
+
+/** 奖励结束：丢掉 bonus 期间预生成的「空平地」，立刻按正常规则续生成障碍 */
+function exitBonusSpace() {
+  bonusActive = false;
+  scheduleNextPortal(distanceM());
+  transitionFx = 1.0;
+  coins = [];
+  const rebuildFrom = CHAR_X + 90;
+  // 只保留脚下附近短平台，清掉 look-ahead 空道与残留障碍
+  platforms = platforms.filter((p) => p.x1 > CHAR_X - 60 && p.x0 < rebuildFrom);
+  for (const p of platforms) {
+    if (p.x1 > rebuildFrom) p.x1 = rebuildFrom;
+  }
+  if (!platforms.length) {
+    platforms.push({ x0: CHAR_X - 40, x1: rebuildFrom });
+  }
+  cullInPlace(walls, (w) => w.x + w.w < rebuildFrom);
+  cullInPlace(beams, (b) => b.x + b.w < rebuildFrom);
+  cullInPlace(monsters, (m) => m.x < rebuildFrom);
+  cullInPlace(spikes, (s) => s.x + s.w < rebuildFrom);
+  cullInPlace(flyers, (f) => f.x < rebuildFrom);
+  cullInPlace(bats, (b) => b.x < rebuildFrom);
+  cullInPlace(gaps, (g) => g.x + g.w < rebuildFrom);
+  cullInPlace(elevatedPlatforms, (p) => p.x1 < rebuildFrom);
+  cullInPlace(powerups, (p) => p.x < rebuildFrom);
+  genX = rebuildFrom;
+  featureCooldown = 0;
+  gapCooldown = 1;
+  duckObsCd = 0;
+  jumpObsCd = 0;
+  platformAfterGap = 1; // 下一段起允许刷障碍（勿锁在 afterGap 安全段）
+  portal = null;
+  portalSuck = null;
+  ensureGen();
 }
 
 // ===================== 游戏控制 =====================
@@ -2042,14 +2087,7 @@ function update(dt) {
   if (bonusActive) {
     bonusDist += spd * dt / PX_PER_METER;
     if (bonusDist >= BONUS_DIST_MAX) {
-      // 奖励空间结束
-      bonusActive = false;
-      scheduleNextPortal(distanceM());
-      transitionFx = 1.0;
-      // 清除残留金币，恢复正常世界
-      coins = [];
-      featureCooldown = 2;
-      gapCooldown = 3;
+      exitBonusSpace();
     }
   }
 
@@ -5850,7 +5888,10 @@ function resolveRunFrameLayout(pick) {
   let srcL;
   let srcW;
 
-  const footAbsX = cellX + (sheet.runFootLocalX ?? ((frame.w || cellW || img.width) * 0.5));
+  // 跑步必须用「整表固定」脚锚（runFootLocalX），禁止 per-frame footXInContent：
+  // manifest 各帧脚点左右晃（法师 68↔229）→ 局内左右乱跑。
+  // plant 水平居中裁切，格心锚 ≈ 身中心稳定；与跳/攻共用同一 runFootLocalX。
+  const footAbsX = cellX + (sheet.runFootLocalX ?? ((cellW || img.width) * 0.5));
   // 必须画满 content 盒：旧 runLockW 窗裁掉杖尖/剑尖/尘土（每帧丢 15～45px）→ 局内「缺一块」
   // runLockW 只保留给 ensureRunFootAnchors 算脚锚，不再当 drawImage 源宽。
   if (hasContent) {
@@ -5912,11 +5953,12 @@ function drawRunSheetSprite(cx, cy, bob, pick) {
   return true;
 }
 
-/** 跳/攻宫格：与散帧同一套 motionDrawScale + 脚锚。 */
+/** 跳/攻宫格：与跑步同一套「固定格内脚锚」，禁止 per-frame footX（会左右抖）。 */
 function resolveMotionSheetLayout(pick) {
   const { sheet, frame, charId, role } = pick || {};
   const img = sheet?.img;
   if (!img?.width || !frame) return null;
+  const cellX = frame.cellX ?? 0;
   const cellW = frame.cellW || frame.w || 0;
   const cellH = frame.cellH || frame.h || 0;
   const srcL = frame.left ?? frame.cellX ?? 0;
@@ -5932,12 +5974,18 @@ function resolveMotionSheetLayout(pick) {
     roleHint,
     srcH,
   );
-  const footIn = Number.isFinite(frame.anchor?.footXInContent)
-    ? frame.anchor.footXInContent
-    : srcW * 0.5;
+  // 与 CHAR_RUN_SHEETS.runFootLocalX 对齐；扩格时按 cellW/runCellW 比例映射
+  const run = CHAR_RUN_SHEETS[charId];
+  const runCellW = run?.frames?.[0]?.cellW || 512;
+  const baseFoot = Number(run?.runFootLocalX);
+  const footLocal = Number.isFinite(baseFoot)
+    ? baseFoot * (cellW > 0 ? cellW / runCellW : 1)
+    : (cellW * 0.5);
+  const footAbsX = cellX + footLocal;
+  const ax = Math.max(0, Math.min(srcW, footAbsX - srcL));
   return {
     srcL, srcT, srcW, srcH,
-    ax: footIn,
+    ax,
     dw: srcW * scale,
     dh: srcH * scale,
     scale,

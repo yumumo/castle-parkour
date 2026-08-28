@@ -9,7 +9,7 @@
  * 帧数只允许 **4 / 9 / 16**（只补不减）。
  * 散帧调试产物在 `dev/art-raw/singles/`，不进局内加载。
  */
-export const ASSET_VER = '20260821mv';
+export const ASSET_VER = '20260821hl';
 
 export const CHAR_NAMES = { mage: '法师', warrior: '战士' };
 
@@ -34,6 +34,7 @@ export const CHAR_SPRITES = {
 export const CHAR_RUN_SHEETS = {
   mage: {
     src: 'assets/characters/mage/mage-run-sheet.png', img: null, ready: false, frames: null,
+    // 整表固定脚锚（格心）；plant 水平居中。禁止 per-frame foot（会左右抖）
     refH: 296, cols: 3, rows: 3, frameCount: 9, runFootLocalX: 256, runLockW: 300,
   },
   warrior: {
