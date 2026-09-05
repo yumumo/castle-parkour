@@ -216,19 +216,19 @@
           <img src="assets/ui/castle-ui-settings.png?v=20260821hl" width="314" height="275" alt="" decoding="async" />
           <span class="sr-only">设置</span>
         </h2>
-        <div class="stat-row" style="flex-direction:column;align-items:stretch;gap:8px">
-          <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="stat-row col">
+          <div class="stat-head">
             <span>背景音乐</span>
             <b id="vol-bgm-val">80</b>
           </div>
-          <input type="range" id="vol-bgm" min="0" max="100" value="80" style="width:100%;accent-color:#ff6b35">
+          <input type="range" class="vol-slider" id="vol-bgm" min="0" max="100" value="80">
         </div>
-        <div class="stat-row" style="flex-direction:column;align-items:stretch;gap:8px">
-          <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="stat-row col">
+          <div class="stat-head">
             <span>音效</span>
             <b id="vol-sfx-val">90</b>
           </div>
-          <input type="range" id="vol-sfx" min="0" max="100" value="90" style="width:100%;accent-color:#00c9a7">
+          <input type="range" class="vol-slider" id="vol-sfx" min="0" max="100" value="90">
         </div>
         <div class="stat-row"><span>静音快捷键</span><b>M</b></div>
       </div>
