@@ -106,6 +106,12 @@ import {
   ENERGY_REGEN,
   TUTORIAL_LEAD_PX,
   CASTLE_FONT,
+  BONUS_DIST_MAX,
+  PU_R,
+  ACTION_SEG_CD,
+  ACTION_CROSS_CD,
+  ACTION_SEP_PX,
+  monsterHit,
 } from './config/index.js';
 
 const canvas = document.getElementById('game');
@@ -144,13 +150,13 @@ function initAudio() {
 
 function setBgmVolume(v) {
   bgmVolume = v;
-  localStorage.setItem('castle-parkour-vol-bgm', String(v));
+  safeSetItem('castle-parkour-vol-bgm', String(v));
   if (bgmGain) bgmGain.gain.value = v * 0.42;
 }
 
 function setSfxVolume(v) {
   sfxVolume = v;
-  localStorage.setItem('castle-parkour-vol-sfx', String(v));
+  safeSetItem('castle-parkour-vol-sfx', String(v));
 }
 
 // BGM：古堡夜奔——低沉小调进行曲 + 管风琴感和声 + 稀疏鼓点感
@@ -469,6 +475,15 @@ const LS = {
   score: 'castle-parkour-best-score', items: 'castle-parkour-items',
   char: 'castle-parkour-char', chars: 'castle-parkour-chars',
 };
+/** localStorage 写兜底：隐私模式 / 配额超限抛异常会中断游戏流程，统一吞掉并打日志 */
+const safeSetItem = (k, v) => {
+  try {
+    localStorage.setItem(k, v);
+  } catch (e) {
+    console.warn('[castle-parkour] localStorage 写入失败:', k, e?.message || e);
+  }
+};
+
 // 兼容旧版存档键
 (() => {
   const pairs = [
@@ -491,11 +506,12 @@ const LS = {
   for (const [dest, src] of pairs) {
     if (localStorage.getItem(dest) != null) continue;
     const v = localStorage.getItem(src);
-    if (v != null) localStorage.setItem(dest, v);
+    if (v != null) safeSetItem(dest, v);
   }
 })();
+
 const load = (k, d) => Number(localStorage.getItem(k) ?? d);
-const save = (k, v) => localStorage.setItem(k, String(v));
+const save = (k, v) => safeSetItem(k, String(v));
 
 const CHAR_DEFAULTS = {
   mage: { hp: 1, atk: 1, shd: 0, en: 1 },
@@ -541,7 +557,7 @@ function loadCharData() {
 }
 
 function saveCharData() {
-  localStorage.setItem(LS.chars, JSON.stringify(charData));
+  safeSetItem(LS.chars, JSON.stringify(charData));
 }
 
 let charData = loadCharData();
@@ -561,7 +577,7 @@ const loadItems = () => {
   try { return JSON.parse(localStorage.getItem(LS.items)) || { magnet: 0, shield: 0, double: 0, revive: 0 }; }
   catch (e) { return { magnet: 0, shield: 0, double: 0, revive: 0 }; }
 };
-const saveItems = (obj) => localStorage.setItem(LS.items, JSON.stringify(obj));
+const saveItems = (obj) => safeSetItem(LS.items, JSON.stringify(obj));
 
 // ===================== 局内道具拾取（地图随机刷新） =====================
 const PU = {
@@ -571,8 +587,6 @@ const PU = {
   fly:    { color: '#00c9a7', glow: '#7fefde', dur: 0,  name: '起飞' }, // 拾取即触发起飞
 };
 const PU_KEYS = ['magnet', 'double', 'attack']; // fly 拾取即起飞，不走计时器
-const PU_SPAWN_INTERVAL = 333;  // 每 ~333m 刷一个（≈3个/1000m）
-const PU_R = 16;               // 道具拾取半径
 
 // ===================== 状态 =====================
 let running = false;
@@ -628,7 +642,6 @@ let skySprintDurActive = SKY_SPRINT_DUR;
 // ===================== 奖励空间（传送门）状态 =====================
 let bonusActive = false;       // 是否在奖励空间中
 let bonusDist = 0;             // 奖励空间已跑距离
-const BONUS_DIST_MAX = 300;    // 奖励空间长度 300m（缩短，控制金币总量）
 let nextPortalDist = PORTAL_FIRST_DIST;
 let portal = null;             // 传送门实体 { x, y, phase }
 let portalSuck = null;         // 吸入中 { t, fromX, fromY, toX, toY }
@@ -781,7 +794,7 @@ function isRangeFree(cx, cw, pad) {
   for (const w of walls) if (cx < w.x + w.w + pad && cx + cw + pad > w.x) return false;
   for (const b of beams) if (cx < b.x + b.w + pad && cx + cw + pad > b.x) return false;
   for (const m of monsters) {
-    const mw = m.big ? 46 : 28;
+    const mw = monsterHit(m).w;
     if (cx < m.x + mw + pad && cx + cw + pad > m.x) return false;
   }
   for (const s of spikes) if (cx < s.x + s.w + pad && cx + cw + pad > s.x) return false;
@@ -810,11 +823,6 @@ function tryPlace(make, availStart, availEnd, w) {
   return false;
 }
 
-// 跳跃类 ↔ 蹲伏类：段冷却交叉 + 像素间距
-// 交叉冷却取 1，避免吊梁被跳类障碍长时间堵死
-const ACTION_SEG_CD = 2;
-const ACTION_CROSS_CD = 1;
-const ACTION_SEP_PX = 280;
 function markJumpAction() {
   jumpObsCd = Math.max(jumpObsCd, ACTION_SEG_CD);
   duckObsCd = Math.max(duckObsCd, ACTION_CROSS_CD);
@@ -828,7 +836,7 @@ function nearJumpHazards(cx, cw, pad) {
   for (const w of walls) if (cx < w.x + w.w + pad && cx + cw + pad > w.x) return true;
   for (const s of spikes) if (cx < s.x + s.w + pad && cx + cw + pad > s.x) return true;
   for (const m of monsters) {
-    const mw = m.big ? 46 : 28;
+    const mw = monsterHit(m).w;
     if (cx < m.x + mw + pad && cx + cw + pad > m.x) return true;
   }
   for (const p of elevatedPlatforms) if (cx < p.x1 + pad && cx + cw + pad > p.x0) return true;
@@ -1114,9 +1122,9 @@ function spawnFeature(x0, x1, afterGap) {
       // 强制：清掉门附近障碍，保证可读地出现
       const clearR = needW * 0.5 + 50;
       clearAhead(px2 + clearR, { featureCd: 2, gapCd: 2 });
-      gaps = gaps.filter((g) => g.x + g.w < px2 - 40 || g.x > px2 + needW + 40);
-      walls = walls.filter((w) => w.x + w.w < px2 - 30 || w.x > px2 + needW + 30);
-      spikes = spikes.filter((s) => s.x + s.w < px2 - 30 || s.x > px2 + needW + 30);
+      cullInPlace(gaps, (g) => g.x + g.w < px2 - 40 || g.x > px2 + needW + 40);
+      cullInPlace(walls, (w) => w.x + w.w < px2 - 30 || w.x > px2 + needW + 30);
+      cullInPlace(spikes, (s) => s.x + s.w < px2 - 30 || s.x > px2 + needW + 30);
       ok = true;
     }
     if (ok) {
@@ -1697,8 +1705,9 @@ function triggerRoll() {
 function damageMonster(mo, dmg) {
   mo.hp -= dmg;
   if (mo.hp <= 0) {
-    const mh = mo.big ? 2 * U : 1 * U;
-    const mw = mo.big ? 46 : 28;
+    const hit = monsterHit(mo);
+    const mh = hit.h;
+    const mw = hit.w;
     const idx = monsters.indexOf(mo);
     if (idx >= 0) monsters.splice(idx, 1);
     killCount++;
@@ -1736,8 +1745,9 @@ function monsterSurfaceY(mo) {
 }
 
 function monsterHitBox(mo) {
-  const mh = mo.big ? 2 * U : 1 * U;
-  const mw = mo.big ? 46 : 28;
+  const hit = monsterHit(mo);
+  const mh = hit.h;
+  const mw = hit.w;
   return { x: mo.x, y: monsterSurfaceY(mo) - mh, w: mw, h: mh, mh, mw };
 }
 
@@ -2577,8 +2587,6 @@ let _bgCacheFrame = 0;
 let _bgGrad = null;
 let _bgGlow1 = null;
 let _bgGlow2 = null;
-let _groundGrad = null;
-let _groundTheme = null;
 
 let _hudLayout = { buffTop: 88, buffRightX: W - 122 };
 
@@ -2905,7 +2913,6 @@ function drawIndoorHall(scroll) {
 
 function drawOutdoorRampart(scroll) {
   // 远山分层
-  const hillScroll = scroll * 0.4;
   for (let layer = 0; layer < 2; layer++) {
     const spd = 0.35 + layer * 0.2;
     const hs = scroll * spd;
@@ -3942,7 +3949,6 @@ function drawCoins() {
 }
 
 // ---------- canvas helpers (auras / roll fallback) ----------
-const CHAR_INK = '#1a1a1a';
 
 function artCircle(c, x, y, r) {
   c.beginPath();
@@ -5218,6 +5224,13 @@ function loadImageAsset(a, onReady) {
   a._waiters = onReady ? [onReady] : [];
   const img = new Image();
   let settled = false;
+  let timeoutId = null;
+  const clearTimer = () => {
+    if (timeoutId != null) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
+    }
+  };
   const finishOk = () => {
     if (settled) return;
     const w = img.naturalWidth || img.width || 0;
@@ -5225,6 +5238,7 @@ function loadImageAsset(a, onReady) {
     // complete 但尺寸未就绪：等真正的 onload，切勿 finish(false) 否则桌面端全失败
     if (!(w > 0 && h > 0)) return;
     settled = true;
+    clearTimer();
     a.ready = true;
     a.failed = false;
     a._loading = false;
@@ -5238,6 +5252,7 @@ function loadImageAsset(a, onReady) {
   const finishErr = () => {
     if (settled) return;
     settled = true;
+    clearTimer();
     a.ready = false;
     a.failed = true;
     a._loading = false;
@@ -5254,6 +5269,8 @@ function loadImageAsset(a, onReady) {
   img.src = src + (src.includes('?') ? '&' : '?') + 'v=' + ASSET_VER;
   // 仅缓存命中且已有像素时同步完成；宽高为 0 的 complete 必须等 onload
   if (img.complete && (img.naturalWidth || img.width) > 0) finishOk();
+  // 兜底：onload/onerror 均不触发（极端环境/被拦截）时走 finishErr，避免 waiters 永挂
+  timeoutId = setTimeout(finishErr, 8000);
 }
 
 /** 美术尺寸真源：assets/sprite-manifest.json（生图后必须 measure 更新） */
@@ -5389,8 +5406,6 @@ let assetsReady = false;       // 主菜单可用（立绘 + manifest）
 let gameplayReady = false;     // 局内贴图齐（可开跑）
 let assetsPending = 0;
 let assetsFinished = 0;
-let gameplayPending = 0;
-let gameplayFinished = 0;
 const gameplayWaiters = [];
 
 function setStartButtonsEnabled(on) {
@@ -5983,13 +5998,28 @@ function resolveMotionSheetLayout(pick) {
     : (cellW * 0.5);
   const footAbsX = cellX + footLocal;
   const ax = Math.max(0, Math.min(srcW, footAbsX - srcL));
+  // 垂直身尺锁定（动画帧）：dh 不随「本帧 content 包围盒高」直接缩放——
+  // 挥剑/展翅把 contentH 撑高时（warrior.atk f5=548 vs run0 342）会让整人放大，
+  // 空中蜷腿把 contentH 压矮时（mage.jump f4=288 vs 333）会让整人缩小，
+  // 二者都会造成前后帧大小跳变（skill: 头身尺锁 run0，禁为包特效整放大/整缩小）。
+  // 用 run0 站姿身尺做上下限：dh ∈ [CHAR_H_STAND, CHAR_H_STAND × 1.10]，锐减跳变；
+  // 蹲/滚走各自的 layout（resolveRollFrameLayout）不受此约束。
   return {
     srcL, srcT, srcW, srcH,
     ax,
     dw: srcW * scale,
-    dh: srcH * scale,
+    dh: motionMotionDH(srcH, scale),
     scale,
   };
+}
+
+/** 动画帧垂直身尺：锁 [站姿高, 站姿高×1.10]，避免 content 高参差导致的整人缩放跳变。 */
+function motionMotionDH(srcH, scale) {
+  const standDh = CHAR_H_STAND;
+  const raw = srcH * scale;
+  if (raw < standDh) return standDh;            // 过矮 → 抬回站姿（消除法师跳跃缩小）
+  const cap = standDh * 1.10;                   // 过高 → 软顶特效外扩（阻战士挥剑放大）
+  return Math.min(raw, cap);
 }
 
 function drawMotionSheetSprite(cx, cy, bob, pick) {
@@ -6293,7 +6323,7 @@ function buyWarriorChar() {
 function equipUiChar() {
   if (uiCharView === 'warrior' && !charData.warrior.unlocked) return;
   selectedChar = uiCharView;
-  localStorage.setItem(LS.char, selectedChar);
+  safeSetItem(LS.char, selectedChar);
   refreshCharScreen();
   refreshMainMenu();
   updateAttackButtonIcon();

@@ -12,9 +12,6 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / ".cursor" / "skills" / "castle-parkour-art" / "scripts"))
-# also allow import from skill path relative to repo
-SKILL = Path(r"e:/Users/lin/Desktop/Home/XRK-AGT/.cursor/skills/castle-parkour-art/scripts")
-sys.path.insert(0, str(SKILL))
 
 from measure_run_sheet import measure_sheet  # noqa: E402
 from measure_sprites import foot_anchor_x, measure as measure_single  # noqa: E402

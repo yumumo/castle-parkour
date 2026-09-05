@@ -44,7 +44,7 @@
 | `js/config/gameplay.js` | 可调数值（平台尺寸 `PLATFORM_*` 等） |
 | `js/game.js` | 玩法 / 绘制 / 首启加载 |
 
-扩展：`registerCharacter` / `registerWorldAsset` / `registerMonster`；难度乘子 `DIFF_FLOOR` / `DIFF_CEIL`；平台尺寸 `PLATFORM_*`。局内 HUD 用系统字（`drawHudText`），不加载 `castle-hud-digits`。
+扩展：`registerCharacter` / `registerWorldAsset` / `registerMonster`；难度乘子 `DIFF_FLOOR` / `DIFF_CEIL`；平台尺寸 `PLATFORM_*`。局内 HUD 用系统字（`drawHudText`）。
 
 ## 加载策略
 
@@ -89,10 +89,7 @@
 | 文件 | 用途 |
 |------|------|
 | `assets/fonts/castle-display-wordmark.png` | 主标题「古堡跑酷」 |
-| `assets/fonts/castle-hud-digits.png` + `.json` | 管线产物（`compile_castle_hud_font.py`）；局内 HUD 用系统字，不加载 |
 | `assets/ui/castle-ui-*.png` | 副标题 / 面板标题 / 开始·退出 等牌匾 |
-
-重编 HUD 数字：`python dev/compile_castle_hud_font.py`（在本 Core 仓根执行）
 
 ## 上传注意
 

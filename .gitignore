@@ -66,3 +66,23 @@ www/castle-parkour/assets/*.png
 
 # 非局内备份（品红中间态 / 验收表）— 不随游戏仓上传
 Back-castle-parkour/
+ 
+# Python 编译/测试/工具缓存
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+
+# 前端源码映射（仅源产物，不入库）
+*.js.map
+*.ts.map
+
+# numpy / 二进制中间态
+*.npy
+*.npz
+*.bin
+
+# 本地 svg/临时导出
+*.local-*

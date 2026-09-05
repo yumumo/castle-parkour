@@ -27,9 +27,11 @@ from replant_all_action_sheets import (  # noqa: E402
     crop_alpha,
     scale_k,
 )
+from asset_layout import cursor_assets, find_raw  # noqa: E402
 
 ALPHA = 28
-CURSOR = Path(r"C:\Users\lin\.cursor\projects\e-Users-lin-Desktop-Home-XRK-AGT\assets")
+# 可选 Cursor 生成目录（CPK_CURSOR_ASSETS）；未设置时返回 None，落 RAW
+CURSOR = cursor_assets()
 
 
 def upper_w(cell: np.ndarray) -> int | None:
@@ -104,11 +106,18 @@ def plant_foot(crop: Image.Image) -> Image.Image:
 
 
 def plant(char: str, role: str, src_name: str, cols: int, rows: int, ver: str) -> int:
-    src = CURSOR / src_name
-    if not src.exists():
-        src = RAW / src_name
-    if not src.exists():
-        raise FileNotFoundError(src_name)
+    src: Path | None = None
+    if CURSOR is not None:
+        cand = CURSOR / src_name
+        if cand.exists():
+            src = cand
+    if src is None:
+        cand = RAW / src_name
+        src = cand if cand.exists() else None
+    if src is None:
+        # 兜底：art-raw 任意深度找同名
+        from asset_layout import find_raw
+        src = find_raw(src_name)
     shutil.copy2(src, RAW / src_name)
 
     game_run0 = Image.open(ASSETS / "characters" / char / f"{char}-run-sheet.png").convert(

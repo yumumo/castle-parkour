@@ -12,7 +12,7 @@
 | `enemies/` | 敌对立绘 + 运动 sheet |
 | `world/` | 金币 / 火球 / 平台 / 火桩 / 道具等 |
 | `ui/` | 菜单石板按钮（`castle-ui-*.png`） |
-| `fonts/` | 主标题字标 `castle-display-wordmark.png`；`castle-hud-digits.*` 为管线产物、局内不加载 |
+| `fonts/` | 主标题字标 `castle-display-wordmark.png` |
 
 品红底原图只放 `Back-castle-parkour/art-raw/`（gitignore），勿放本目录。
 

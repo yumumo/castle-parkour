@@ -164,3 +164,13 @@ export const TUTORIAL_LEAD_PX = 240;
 
 /** UI / canvas HUD · Castle Type */
 export const CASTLE_FONT = '"Segoe UI","DIN Alternate","Helvetica Neue","PingFang SC","Microsoft YaHei",sans-serif';
+
+/** 奖励空间总长度（m）— 缩短以控制金币总量 */
+export const BONUS_DIST_MAX = 300;
+/** 局内道具拾取半径（px） */
+export const PU_R = 16;
+
+/** 跳跃类 ↔ 蹲伏类障碍：段冷却交叉 + 像素间距（交叉冷却取 1，避免吊梁被跳类障碍长时间堵死） */
+export const ACTION_SEG_CD = 2;
+export const ACTION_CROSS_CD = 1;
+export const ACTION_SEP_PX = 280;

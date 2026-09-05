@@ -18,6 +18,7 @@ export { WORLD_ASSETS, registerWorldAsset } from './world.js';
 export {
   MONSTERS,
   monsterName,
+  monsterHit,
   listMonsterIds,
   registerMonster,
 } from './monsters.js';

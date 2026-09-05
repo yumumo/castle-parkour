@@ -16,11 +16,12 @@ import numpy as np
 from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from asset_layout import ASSETS, RAW  # noqa: E402
+from asset_layout import ASSETS, RAW, cursor_assets  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 WWW = ROOT / "www" / "castle-parkour"
-CURSOR_ASSETS = Path(r"C:\Users\lin\.cursor\projects\e-Users-lin-Desktop-Home-XRK-AGT\assets")
+# 可选 Cursor 生成目录（CPK_CURSOR_ASSETS）；未设置时为 None，走 art-raw
+CURSOR_ASSETS = cursor_assets()
 
 CW, CH, FOOT, MARGIN, ALPHA = 512, 768, 754, 20, 28
 VER = "20260821m"
@@ -211,9 +212,10 @@ def plant_scaled(crop: Image.Image) -> Image.Image:
 
 
 def find_src(name: str) -> Path:
-    p = CURSOR_ASSETS / name
-    if p.is_file():
-        return p
+    if CURSOR_ASSETS is not None:
+        p = CURSOR_ASSETS / name
+        if p.is_file():
+            return p
     try:
         from asset_layout import find_raw
 

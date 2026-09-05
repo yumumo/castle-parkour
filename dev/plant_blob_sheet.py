@@ -30,24 +30,26 @@ from replant_all_action_sheets import (  # noqa: E402
     crop_alpha,
     scale_k,
 )
-from asset_layout import find_raw, raw_action_dir  # noqa: E402
+from asset_layout import cursor_assets, find_raw, raw_action_dir  # noqa: E402
 
 ALPHA = 28
 DEFAULT_CW, DEFAULT_CH = 512, 768
 FOOT_GAP = 14
 MARGIN = 20
-CURSOR = Path(r"C:\Users\lin\.cursor\projects\e-Users-lin-Desktop-Home-XRK-AGT\assets")
+# 可选 Cursor 生成目录（CPK_CURSOR_ASSETS）；未设置为 None，走 find_raw
+CURSOR = cursor_assets()
 MIN_BLOB = 800
 
 
 def resolve_plant_src(src_name: str) -> Path:
-    """Resolve --src: absolute/relative path, Cursor assets/, or art-raw basename."""
+    """Resolve --src: absolute/relative path, Cursor assets/ (opt-in), or art-raw basename."""
     p = Path(src_name)
     if p.is_file():
         return p.resolve()
-    cand = CURSOR / Path(src_name).name
-    if cand.is_file():
-        return cand
+    if CURSOR is not None:
+        cand = CURSOR / Path(src_name).name
+        if cand.is_file():
+            return cand
     return find_raw(Path(src_name).name)
 
 

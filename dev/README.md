@@ -38,32 +38,18 @@
 
 | 脚本 | 作用 |
 |------|------|
-| `action_sheet_align.py` | 跑步尺、`sheet_k`、plant、书档表 |
-| `plant_blob_sheet.py` | **主种入**（blob 切格 + 同尺 + 扩格） |
+| `plant_blob_sheet.py` | **主种入**（blob 切格 + 同尺 + 扩格 + `--head-lock`） |
+| `replant_all_action_sheets.py` | 共享 chroma / crop_alpha / scale_k 基建（被 plant_blob 引用） |
 | `plant_gutter_sheet.py` | 等分 gutter plant（旧路径） |
-| `import_jump_roll_sheets.py` | 切格 / reconnect / plant 基建 |
-| `rebuild_jump_clean.py` | 跳表重打（真姿态，禁残影） |
-| `build_mage_jump_align.py` | 法师跳 |
-| `build_mage_atk_align.py` | 法师攻 |
-| `build_mage_roll_spin.py` | 法师滚 → **3×3 / 9** |
-| `build_warrior_jump_align.py` | 战士跳 |
-| `build_warrior_atk_align.py` | 战士攻 |
-| `build_warrior_roll_spin.py` | 战士滚 → **3×3 / 9** |
-| `build_warrior_roll_align.py` | 兼容入口 → `roll_spin` |
-| `build_monster_motion_sheets.py` | 怪 2×2 |
-| `pack_motion_grids.py` | 散帧→宫格（迁移/验收；滚只检查 3×3） |
-| `pad_motion_framecounts.py` | 帧数对齐到 4/9/16 |
-| `remeasure_all_sheets.py` | 全表重测 content 盒 |
+| `asset_layout.py` | `find_asset` / `find_raw` / 分区常量 |
+| `remeasure_all_sheets.py` | 全表重测 content 盒 → manifest |
 | `bake_motion_align.py` | 头对齐 + manifest（**勿 blind 全表 bake**） |
 | `matte_cleanup.py` | 可选：品红/软边清理 |
 | `audit_all_assets.py` | 全量 PNG 审计；报告 `art-raw/audit/` |
 | `audit_sheet_matte.py` | 单表抠图验收 |
 | `qa_sheet_scale_dust.py` | coreH + 尾气贴边 QA |
+| `build_monster_motion_sheets.py` | 怪 2×2（bat/flyer/giant） |
 | `compile_castle_hud_font.py` | HUD 数字位图编译 |
-| `asset_layout.py` | `find_asset` / `find_raw` / 分区常量 |
-| `ingest_motion_from_portrait.py` | 立绘→动作（迁移） |
-| `rebuild_rolls_locked.py` | 滚表锁定重建 |
-| `replant_all_action_sheets.py` | 批量 plant 基建（被 plant_blob 引用） |
 
 测尺：主仓 `.cursor/skills/castle-parkour-art/scripts/measure_sprites.py`。
 
@@ -88,24 +74,14 @@
 python .cursor/skills/immersive-short-video/scripts/chroma_key.py \
   --input core/castle-parkour/Back-castle-parkour/art-raw --glob "**/*-magenta.png"
 
-python core/castle-parkour/dev/build_mage_jump_align.py
-python core/castle-parkour/dev/build_mage_atk_align.py
-python core/castle-parkour/dev/build_mage_roll_spin.py
-python core/castle-parkour/dev/build_warrior_jump_align.py
-python core/castle-parkour/dev/build_warrior_atk_align.py
-python core/castle-parkour/dev/build_warrior_roll_spin.py
+# 种入（主入口）：blob 切格 + 同尺 + 扩格 + 可选 --head-lock
+python core/castle-parkour/dev/plant_blob_sheet.py --char warrior --role atk \
+  --src <path-or-basename-magenta.png> --cols 3 --rows 3 --ver 20260821xx
 
 python .cursor/skills/castle-parkour-art/scripts/measure_sprites.py \
   --input core/castle-parkour/www/castle-parkour/assets
 # 仅在需要头对齐时：python core/castle-parkour/dev/bake_motion_align.py
 # bump ASSET_VER → Ctrl+F5
-```
-
-种入（推荐）：
-
-```bash
-python core/castle-parkour/dev/plant_blob_sheet.py --char warrior --role atk \
-  --src <path-or-basename-magenta.png> --cols 3 --rows 3 --ver 20260821xx
 ```
 
 ## 局内要点

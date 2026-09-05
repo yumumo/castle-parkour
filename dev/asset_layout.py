@@ -19,12 +19,26 @@ Layout (www/castle-parkour/assets/):
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 DEV = Path(__file__).resolve().parent
 CORE = DEV.parent
 ASSETS = CORE / "www" / "castle-parkour" / "assets"
 BACKUP_RAW = CORE / "Back-castle-parkour" / "art-raw"
+
+
+def cursor_assets() -> Path | None:
+    """Opt-in Cursor-generated-assets dir via ``CPK_CURSOR_ASSETS`` env var.
+
+    Returns None when unset or the dir doesn't exist, so callers fall through
+    to the in-repo ``art-raw`` source instead of hard-coding a machine path.
+    """
+    v = os.environ.get("CPK_CURSOR_ASSETS", "").strip()
+    if not v:
+        return None
+    p = Path(v)
+    return p if p.is_dir() else None
 
 
 def resolve_raw() -> Path:
